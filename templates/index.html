@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Carrer AI Maps</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background-color: rgb(165, 221, 231);
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h1, h2 {
+      color: #333;
+    }
+    #map { 
+      height: 500px; 
+      margin-bottom: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    textarea {
+      height: 100px;
+      resize: vertical;
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      margin-left: -10px;
+      margin-right: -10px;
+    }
+    .col {
+      flex: 1;
+      padding: 0 10px;
+      min-width: 200px;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: background-color 0.3s;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .secondary-btn {
+      background-color: #2196F3;
+    }
+    .secondary-btn:hover {
+      background-color: #1976D2;
+    }
+    #results {
+      margin-top: 30px;
+    }
+    .job-card {
+      background-color: #f9f9f9;
+      border-radius: 5px;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-left: 5px solid #4CAF50;
+      transition: transform 0.2s;
+    }
+    .job-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    .job-title {
+      font-weight: bold;
+      font-size: 18px;
+      margin-bottom: 5px;
+    }
+    .job-location, .job-salary, .job-distance {
+      margin-bottom: 5px;
+    }
+    .job-location::before {
+      content: "📍 ";
+    }
+    .job-salary::before {
+      content: "💰 ";
+    }
+    .job-distance::before {
+      content: "🚗 ";
+    }
+    .loader {
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid #3498db;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 2s linear infinite;
+      margin: 20px auto;
+      display: none;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .hidden {
+      display: none;
+    }
+    .tabs {
+      display: flex;
+      border-bottom: 2px solid #ddd;
+      margin-bottom: 20px;
+    }
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.3s;
+    }
+    .tab.active {
+      border-bottom-color: #4CAF50;
+      background-color: #f0f8f0;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .help-text {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+    .suggestion {
+      background-color: #e3f2fd;
+      border: 1px solid #2196F3;
+      border-radius: 4px;
+      padding: 8px;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    .success-message {
+      background-color: #dcedc8;
+      border: 1px solid #4CAF50;
+      color: #2e7d32;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .error-message {
+      background-color: #ffebee;
+      border: 1px solid #f44336;
+      color: #c62828;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Carrer AI Maps</h1>
+    <p>Trova il lavoro ideale ovunque nel mondo con l'aiuto dell'intelligenza artificiale</p>
+    
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('search')">Cerca Lavori</div>
+      <div class="tab" onclick="switchTab('add')">Aggiungi Lavoro</div>
+      <div class="tab" onclick="switchTab('city')">Aggiungi Città</div>
+    </div>
+    
+    <!-- Tab Cerca Lavori -->
+    <div id="search-tab" class="tab-content active">
+      <div id="map"></div>
+      
+      <div class="row">
+        <div class="col">
+          <div class="form-group">
+            <label for="startLat">Latitudine attuale:</label>
+            <input id="startLat" type="number" step="0.0001" placeholder="Es. 45.4642" />
+          </div>
+        </div>
+        <div class="col">
+          <div class="form-group">
+            <label for="startLng">Longitudine attuale:</label>
+            <input id="startLng" type="number" step="0.0001" placeholder="Es. 9.1900" />
+          </div>
+        </div>
+      </div>
+
+  
+    <script>
+    // Aggiungi questo alla funzione switchTab esistente
+    function switchTab(tab) {
+      // ... codice esistente ...
+      
+      // Gestione specifica per la tab città
+      if (tab === 'city') {
+        if (userMarker) {
+          map.removeLayer(userMarker);
+          userMarker = null;
+        }
+        if (addJobMarker) {
+          map.removeLayer(addJobMarker);
+          addJobMarker = null;
+        }
+        // Rimuovi tutti i marker dei lavori
+        jobMarkers.forEach(marker => map.removeLayer(marker));
+        lines.forEach(line => map.removeLayer(line));
+        jobMarkers = [];
+        lines = [];
+      } else if (tab === 'search') {
+        if (addJobMarker) {
+          map.removeLayer(addJobMarker);
+          addJobMarker = null;
+        }
+      } else if (tab === 'add') {
+        // Codice esistente per la tab add...
+      }
+    }
+
+    // Gestione del form per aggiungere città
+    document.getElementById('add-city-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const cityData = {
+        country_name: document.getElementById('add-city-name').value,
+        cost_of_living: parseFloat(document.getElementById('add-city-cost-living').value),
+        rent_index: parseFloat(document.getElementById('add-city-rent').value),
+        latitude: parseFloat(document.getElementById('add-city-lat').value),
+        longitude: parseFloat(document.getElementById('add-city-lng').value),
+        groceries_index: document.getElementById('add-city-groceries').value || null,
+        restaurant_index: document.getElementById('add-city-restaurant').value || null,
+        purchasing_power: document.getElementById('add-city-purchasing').value || null
+      };
+      
+      if (cityData.groceries_index) cityData.groceries_index = parseFloat(cityData.groceries_index);
+      if (cityData.restaurant_index) cityData.restaurant_index = parseFloat(cityData.restaurant_index);
+      if (cityData.purchasing_power) cityData.purchasing_power = parseFloat(cityData.purchasing_power);
+      
+      fetch('/add_city', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cityData)
+      })
+      .then(response => response.json())
+      .then(data => {
+        const messageContainer = document.getElementById('city-message-container');
+        
+        if (data.status === 'success') {
+          messageContainer.innerHTML = '<div class="success-message">' + data.message + '</div>';
+          clearAddCityForm();
+        } else {
+          messageContainer.innerHTML = '<div class="error-message">' + data.message + '</div>';
+        }
+      })
+      .catch(error => {
+        console.error('Errore:', error);
+        document.getElementById('city-message-container').innerHTML = '<div class="error-message">Si è verificato un errore durante l\'aggiunta della città.</div>';
+      });
+    });
+
+    function clearAddCityForm() {
+      document.getElementById('add-city-form').reset();
+      if (addJobMarker) {
+        map.removeLayer(addJobMarker);
+        addJobMarker = null;
+      }
+    }
+
+    function searchCities() {
+      const searchTerm = document.getElementById('search-city').value;
+      
+      fetch('/search_cities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ search_term: searchTerm })
+      })
+      .then(response => response.json())
+      .then(data => {
+        const resultsDiv = document.getElementById('search-results');
+        
+        if (data.status === 'success' && data.results.length > 0) {
+          let html = '<h4>Risultati trovati:</h4>';
+          html += '<table style="width: 100%; border-collapse: collapse; margin-top: 10px;">';
+          html += '<tr style="background-color: #f2f2f2; font-weight: bold;">';
+          html += '<td style="padding: 8px; border: 1px solid #ddd;">Città</td>';
+          html += '<td style="padding: 8px; border: 1px solid #ddd;">Costo Vita</td>';
+          html += '<td style="padding: 8px; border: 1px solid #ddd;">Affitto</td>';
+          html += '<td style="padding: 8px; border: 1px solid #ddd;">Combinato</td>';
+          html += '</tr>';
+          
+          data.results.forEach(city => {
+            html += '<tr>';
+            html += `<td style="padding: 8px; border: 1px solid #ddd;">${city.country}</td>`;
+            html += `<td style="padding: 8px; border: 1px solid #ddd;">${city.cost_of_living.toFixed(2)}</td>`;
+            html += `<td style="padding: 8px; border: 1px solid #ddd;">${city.rent_index.toFixed(2)}</td>`;
+            html += `<td style="padding: 8px; border: 1px solid #ddd;">${city.combined_index.toFixed(2)}</td>`;
+            html += '</tr>';
+          });
+          
+          html += '</table>';
+          resultsDiv.innerHTML = html;
+        } else {
+          resultsDiv.innerHTML = '<p>Nessun risultato trovato.</p>';
+        }
+      })
+      .catch(error => {
+        console.error('Errore nella ricerca:', error);
+        document.getElementById('search-results').innerHTML = '<p>Errore durante la ricerca.</p>';
+      });
+    }
+
+    // Modifica il gestore del click sulla mappa per supportare anche la tab città
+    map.on('click', function(e) {
+      const currentTab = document.querySelector('.tab.active').textContent;
+      
+      if (currentTab === 'Aggiungi Città') {
+        // Se siamo nella tab di aggiunta città, aggiungi le coordinate
+        document.getElementById('add-city-lat').value = e.latlng.lat.toFixed(4);
+        document.getElementById('add-city-lng').value = e.latlng.lng.toFixed(4);
+        
+        if (addJobMarker) {
+          map.removeLayer(addJobMarker);
+        }
+        
+        addJobMarker = L.marker(e.latlng, { icon: addJobIcon })
+          .addTo(map)
+          .bindPopup("Nuova città")
+          .openPopup();
+      } else if (currentTab === 'Aggiungi Lavoro') {
+        // Codice esistente per aggiungere lavori...
+      } else {
+        // Codice esistente per la tab di ricerca...
+      }
+    });
+    </script>
+      
+      <div class="form-group">
+        <label for="job-title">Lavoro desiderato:</label>
+        <select id="job-title">
+          <option value="">Seleziona un lavoro</option>
+          <!-- Opzioni caricate dinamicamente -->
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>
+          <input type="checkbox" id="dalla-mia-posizione" checked>
+            Dalla mia posizione (priorità distanza)
+        </label>
+        <div class="help-text">Se selezionato, darà più importanza alla distanza dal tuo luogo corrente</div>
+      </div>
+
+      
+      
+      <button id="search-btn" onclick="cercaLavori()">Cerca Lavori</button>
+      
+      <div class="loader" id="loader"></div>
+      
+      <div id="results" class="hidden">
+        <h2>I migliori lavori per te:</h2>
+        <div id="jobs-container"></div>
+      </div>
+    </div>
+
+    
+    
+    <!-- Tab Aggiungi Lavoro -->
+    <div id="add-tab" class="tab-content">
+      <h2>Aggiungi una nuova offerta di lavoro</h2>
+      <div id="message-container"></div>
+      
+      <form id="add-job-form">
+        <div class="form-group">
+          <label for="add-job-title">Titolo del lavoro:</label>
+          <input id="add-job-title" type="text" required placeholder="Es. Data Scientist" />
+        </div>
+        
+        <div class="form-group">
+          <label for="add-company">Azienda:</label>
+          <input id="add-company" type="text" placeholder="Nome dell'azienda (opzionale)" />
+        </div>
+        
+        <div class="row">
+          <div class="col">
+            <div class="form-group">
+              <label for="add-country">Paese:</label>
+              <input id="add-country" type="text" required placeholder="Es. Italy" onblur="validateCountry()" />
+              <div id="country-suggestion" class="suggestion hidden"></div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="form-group">
+              <label for="add-location">Città:</label>
+              <input id="add-location" type="text" required placeholder="Es. Milan" onblur="suggestCoordinates()" />
+            </div>
+          </div>
+        </div>
+        
+        <div class="row">
+          <div class="col">
+            <div class="form-group">
+              <label for="add-latitude">Latitudine:</label>
+              <input id="add-latitude" type="number" step="0.0001" required placeholder="Es. 45.4642" />
+              <div class="help-text">Clicca sulla mappa per ottenere automaticamente le coordinate</div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="form-group">
+              <label for="add-longitude">Longitudine:</label>
+              <input id="add-longitude" type="number" step="0.0001" required placeholder="Es. 9.1900" />
+            </div>
+          </div>
+        </div>
+        
+        <div class="row">
+          <div class="col">
+            <div class="form-group">
+              <label for="add-salary-range">Range stipendio:</label>
+              <input id="add-salary-range" type="text" required placeholder="Es. $50K-$80K o 50000-80000" />
+              <div class="help-text">Formati validi: $50K-$80K, €40000-60000, 50000-70000</div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="form-group">
+              <label for="add-currency">Valuta:</label>
+              <select id="add-currency">
+                <option value="EUR">EUR</option>
+                <option value="USD">USD</option>
+                <option value="GBP">GBP</option>
+                <option value="CAD">CAD</option>
+                <option value="AUD">AUD</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="add-job-description">Descrizione del lavoro:</label>
+          <textarea id="add-job-description" placeholder="Descrivi brevemente il ruolo e le responsabilità (opzionale)"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label for="add-requirements">Requisiti:</label>
+          <textarea id="add-requirements" placeholder="Elenca i requisiti principali (opzionale)"></textarea>
+        </div>
+        
+        <div class="row">
+          <div class="col">
+            <div class="form-group">
+              <label for="add-employment-type">Tipo di contratto:</label>
+              <select id="add-employment-type">
+                <option value="Full-time">Full-time</option>
+                <option value="Part-time">Part-time</option>
+                <option value="Contract">Contratto</option>
+                <option value="Freelance">Freelance</option>
+                <option value="Internship">Stage</option>
+              </select>
+            </div>
+          </div>
+          <div class="col">
+            <div class="form-group">
+              <label for="add-experience-level">Livello di esperienza:</label>
+              <select id="add-experience-level">
+                <option value="Entry-level">Entry-level</option>
+                <option value="Mid-level">Mid-level</option>
+                <option value="Senior">Senior</option>
+                <option value="Manager">Manager</option>
+                <option value="Director">Director</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="add-remote"> 
+            Lavoro remoto disponibile
+          </label>
+        </div>
+        
+        <button type="submit" class="primary-btn">Aggiungi Lavoro</button>
+        <button type="button" class="secondary-btn" onclick="clearAddJobForm()">Cancella</button>
+      </form>
+    </div>
+
+
+    <!-- Tab AGGIUNGI CITTÀ-->
+    <div id="city-tab" class="tab-content">
+        <h2>Aggiungi una nuova città/luogo</h2>
+        <p>Aggiungi una città o località non presente nel database con i dati del costo della vita</p>
+      <div id="city-message-container"></div>
+  
+      <form id="add-city-form">
+        <div class="form-group">
+          <label for="add-city-name">Nome della città/località:</label>
+          <input id="add-city-name" type="text" required placeholder="Es. Venice, Sicily, etc." />
+          <div class="help-text">Inserisci il nome della città o località che vuoi aggiungere</div>
+        </div>
+        
+        <div class="row">
+          <div class="col">
+            <div class="form-group">
+              <label for="add-city-cost-living">Indice costo della vita:</label>
+              <input id="add-city-cost-living" type="number" step="0.01" required placeholder="Es. 65.5" />
+              <div class="help-text">Valore da 0 a 150 (riferimento: New York = 100)</div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="form-group">
+              <label for="add-city-rent">Indice affitto:</label>
+              <input id="add-city-rent" type="number" step="0.01" required placeholder="Es. 28.5" />
+              <div class="help-text">Valore da 0 a 100 (riferimento: New York = 100)</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="row">
+          <div class="col">
+            <div class="form-group">
+              <label for="add-city-lat">Latitudine:</label>
+              <input id="add-city-lat" type="number" step="0.0001" required placeholder="Es. 45.4642" />
+              <div class="help-text">Clicca sulla mappa per ottenere le coordinate</div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="form-group">
+              <label for="add-city-lng">Longitudine:</label>
+              <input id="add-city-lng" type="number" step="0.0001" required placeholder="Es. 9.1900" />
+            </div>
+          </div>
+        </div>
+        
+        <h3>Dati aggiuntivi (opzionali)</h3>
+        <div class="row">
+          <div class="col">
+            <div class="form-group">
+              <label for="add-city-groceries">Indice alimentari:</label>
+              <input id="add-city-groceries" type="number" step="0.01" placeholder="Es. 55.0" />
+              <div class="help-text">Se non inserito, verrà usato un valore predefinito</div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="form-group">
+              <label for="add-city-restaurant">Indice ristoranti:</label>
+              <input id="add-city-restaurant" type="number" step="0.01" placeholder="Es. 48.0" />
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="add-city-purchasing">Indice potere d'acquisto:</label>
+          <input id="add-city-purchasing" type="number" step="0.01" placeholder="Es. 62.0" />
+          <div class="help-text">Quanto si può comprare con lo stipendio medio</div>
+        </div>
+        
+        <button type="submit" class="primary-btn">Aggiungi Città</button>
+        <button type="button" class="secondary-btn" onclick="clearAddCityForm()">Cancella</button>
+      </form>
+      
+      <div style="margin-top: 40px;">
+        <h3>Cerca città esistenti</h3>
+        <div class="row">
+          <div class="col">
+            <input id="search-city" type="text" placeholder="Cerca per nome..." />
+          </div>
+          <div class="col">
+            <button onclick="searchCities()">Cerca</button>
+          </div>
+        </div>
+        <div id="search-results" style="margin-top: 20px;"></div>
+      </div>
+    </div>
+
+        
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // Inizializza la mappa
+    const map = L.map('map').setView([45.4642, 9.1900], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Variabili per i marker e le linee
+    let userMarker, jobMarkers = [], lines = [];
+    let addJobMarker = null;
+
+    // Immagini caricate da github e modificate creando un nuovo oggetto L.Icon
+    const userIcon = new L.Icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    const jobIcon = new L.Icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
+      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    const addJobIcon = new L.Icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    // Gestione delle tab
+    function switchTab(tab) {
+      // Nascondi tutti i contenuti delle tab
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      
+      // Disattiva tutte le tab
+      document.querySelectorAll('.tab').forEach(t => {
+        t.classList.remove('active');
+      });
+      
+      // Attiva la tab selezionata
+      document.getElementById(tab + '-tab').classList.add('active');
+      event.target.classList.add('active');
+      
+      // Rimuovi marker della tab precedente
+      if (tab === 'search') {
+        if (addJobMarker) {
+          map.removeLayer(addJobMarker);
+          addJobMarker = null;
+        }
+      } else {
+        jobMarkers.forEach(marker => map.removeLayer(marker));
+        lines.forEach(line => map.removeLayer(line));
+        jobMarkers = [];
+        lines = [];
+      }
+    }
+
+    // Ottieni titoli di lavoro dal server
+    window.onload = function() {
+      fetch('/get_job_titles')
+        .then(response => response.json())
+        .then(data => {
+          if (data.job_titles) {
+            const select = document.getElementById('job-title');
+            data.job_titles.forEach(title => {
+              const option = document.createElement('option');
+              option.value = title;
+              option.textContent = title;
+              select.appendChild(option);
+            });
+          }
+        })
+        .catch(error => console.error('Errore nel caricare i titoli di lavoro:', error));
+      
+      // Imposta la posizione dell'utente sulla mappa quando si carica la pagina
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          
+          document.getElementById('startLat').value = lat.toFixed(4);
+          document.getElementById('startLng').value = lng.toFixed(4);
+          
+          map.setView([lat, lng], 8);
+          
+          // Aggiungi marker per la posizione dell'utente
+          if (userMarker) map.removeLayer(userMarker);
+          userMarker = L.marker([lat, lng], { icon: userIcon }).addTo(map).bindPopup("La tua posizione").openPopup();
+        });
+      }
+    };
+
+    function cercaLavori() {
+      // Mostra il loader
+      document.getElementById('loader').style.display = 'block';
+      document.getElementById('results').classList.add('hidden');
+      // Ottieni lo stato del checkbox
+      const dallaMiaPosizione = document.getElementById('dalla-mia-posizione').checked;
+      console.log("Checkbox selezionato:", dallaMiaPosizione); 
+
+      // Rimuovi marker e linee precedenti
+      jobMarkers.forEach(marker => map.removeLayer(marker));
+      lines.forEach(line => map.removeLayer(line));
+      jobMarkers = [];
+      lines = [];
+      
+      // Ottieni i dati dall'interfaccia
+      const lat = document.getElementById('startLat').value;
+      const lng = document.getElementById('startLng').value;
+      const jobTitle = document.getElementById('job-title').value;
+      
+      if (!lat || !lng || !jobTitle) {
+        alert('Per favore, compila tutti i campi');
+        document.getElementById('loader').style.display = 'none';
+        return;
+      }
+      
+      // Aggiungi marker per la posizione dell'utente
+      if (userMarker) map.removeLayer(userMarker);
+      userMarker = L.marker([lat, lng], { icon: userIcon }).addTo(map).bindPopup("La tua posizione").openPopup();
+      
+      // Invia i dati al server
+      fetch('/find_best_jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          latitude: lat, 
+          longitude: lng,
+          job_title: jobTitle,
+          dalla_mia_posizione: dallaMiaPosizione
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        // Nascondi il loader
+        document.getElementById('loader').style.display = 'none';
+        
+        if (data.error) {
+          alert('Errore: ' + data.error);
+          return;
+        }
+        
+        // Mostra i risultati
+        document.getElementById('results').classList.remove('hidden');
+        
+        // Crea i marker e le linee sulla mappa
+        const bounds = L.latLngBounds();
+        bounds.extend([lat, lng]); // Aggiungi la posizione dell'utente
+        
+        // Aggiungi la posizione dell'utente
+        const userLatLng = [lat, lng];
+        
+        // Genera HTML per i job card
+        const jobsContainer = document.getElementById('jobs-container');
+        jobsContainer.innerHTML = '';
+        
+        data.best_jobs.forEach((job, index) => {
+          // Aggiungi marker sulla mappa
+          const jobLatLng = [job.latitude, job.longitude];
+          const marker = L.marker(jobLatLng, { icon: jobIcon })
+            .addTo(map)
+            .bindPopup(`<strong>${job.job_title}</strong><br>${job.location}, ${job.country}<br>Stipendio: ${job.salary_range}<br>Distanza: ${job.distanza.toFixed(2)} km`);
+          
+          jobMarkers.push(marker);
+          bounds.extend(jobLatLng);
+          
+          // Aggiungi linea dalla posizione dell'utente al lavoro
+          const line = L.polyline([userLatLng, jobLatLng], { color: getLineColor(index), weight: 3, opacity: 0.8 }).addTo(map);
+          lines.push(line);
+          
+          // Crea job card
+          const jobCard = document.createElement('div');
+          jobCard.className = 'job-card';
+          jobCard.dataset.index = index;
+          jobCard.innerHTML = `
+            <div class="job-title">${job.job_title}</div>
+            <div class="job-location">${job.location}, ${job.country}</div>
+            <div class="job-salary">Stipendio: ${job.salary_range}</div>
+            <div class="job-distance">Distanza: ${job.distanza.toFixed(2)} km</div>
+          `;
+          
+          // Aggiungi event listener per evidenziare il lavoro sulla mappa
+          jobCard.addEventListener('mouseenter', function() {
+            marker.openPopup();
+            line.setStyle({ weight: 6, opacity: 1 });
+          });
+          
+          jobCard.addEventListener('mouseleave', function() {
+            marker.closePopup();
+            line.setStyle({ weight: 3, opacity: 0.8 });
+          });
+          
+          jobCard.addEventListener('click', function() {
+            map.fitBounds(L.latLngBounds([userLatLng, jobLatLng]));
+          });
+          
+          jobsContainer.appendChild(jobCard);
+        });
+        
+        // Adatta la vista della mappa per mostrare tutti i marker
+        map.fitBounds(bounds, { padding: [50, 50] });
+      })
+      .catch(error => {
+        document.getElementById('loader').style.display = 'none';
+        console.error('Errore:', error);
+        alert('Si è verificato un errore durante la ricerca dei lavori.');
+      });
+    }
+    
+    function getLineColor(index) {
+      // Restituisce un colore diverso per ogni linea
+      const colors = ['#4CAF50', '#2196F3', '#FF9800', '#E91E63', '#9C27B0', '#00BCD4', '#FF5722', '#795548', '#607D8B', '#3F51B5'];
+      return colors[index % colors.length];
+    }
+    
+    // Gestione del form per aggiungere nuovi lavori
+    document.getElementById('add-job-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const jobData = {
+        job_title: document.getElementById('add-job-title').value,
+        company: document.getElementById('add-company').value,
+        country: document.getElementById('add-country').value,
+        location: document.getElementById('add-location').value,
+        latitude: document.getElementById('add-latitude').value,
+        longitude: document.getElementById('add-longitude').value,
+        salary_range: document.getElementById('add-salary-range').value,
+        currency: document.getElementById('add-currency').value,
+        job_description: document.getElementById('add-job-description').value,
+        requirements: document.getElementById('add-requirements').value,
+        employment_type: document.getElementById('add-employment-type').value,
+        experience_level: document.getElementById('add-experience-level').value,
+        remote: document.getElementById('add-remote').checked
+      };
+      
+      fetch('/add_job', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(jobData)
+      })
+      .then(response => response.json())
+      .then(data => {
+        const messageContainer = document.getElementById('message-container');
+        
+        if (data.status === 'success') {
+          messageContainer.innerHTML = '<div class="success-message">' + data.message + '</div>';
+          clearAddJobForm();
+          
+          // Aggiorna le opzioni nel menu di ricerca
+          updateJobTitleOptions();
+        } else {
+          messageContainer.innerHTML = '<div class="error-message">' + data.message + '</div>';
+        }
+      })
+      .catch(error => {
+        console.error('Errore:', error);
+        document.getElementById('message-container').innerHTML = '<div class="error-message">Si è verificato un errore durante l\'aggiunta del lavoro.</div>';
+      });
+    });
+    
+    function clearAddJobForm() {
+      document.getElementById('add-job-form').reset();
+      if (addJobMarker) {
+        map.removeLayer(addJobMarker);
+        addJobMarker = null;
+      }
+      document.getElementById('country-suggestion').classList.add('hidden');
+    }
+    
+    function validateCountry() {
+      const country = document.getElementById('add-country').value;
+      
+      if (!country) return;
+      
+      fetch('/validate_location', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ country: country })
+      })
+      .then(response => response.json())
+      .then(data => {
+        const suggestionDiv = document.getElementById('country-suggestion');
+        
+        if (data.status === 'success') {
+          if (data.exists) {
+            suggestionDiv.innerHTML = `✓ Paese riconosciuto: ${data.correct_name}`;
+            suggestionDiv.classList.remove('hidden');
+          } else if (data.suggested_names.length > 0) {
+            let suggestions = 'Non trovato. Suggerimenti: ' + data.suggested_names.join(', ');
+            suggestionDiv.innerHTML = suggestions;
+            suggestionDiv.classList.remove('hidden');
+          } else {
+            suggestionDiv.classList.add('hidden');
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Errore nella validazione del paese:', error);
+      });
+    }
+    
+    function suggestCoordinates() {
+      const location = document.getElementById('add-location').value;
+      const country = document.getElementById('add-country').value;
+      
+      if (!location) return;
+      
+      fetch('/get_location_coords', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ location: location, country: country })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === 'success') {
+          document.getElementById('add-latitude').value = data.latitude.toFixed(4);
+          document.getElementById('add-longitude').value = data.longitude.toFixed(4);
+          
+          // Aggiorna il marker sulla mappa
+          if (addJobMarker) {
+            map.removeLayer(addJobMarker);
+          }
+          addJobMarker = L.marker([data.latitude, data.longitude], { icon: addJobIcon })
+            .addTo(map)
+            .bindPopup(`${location}, ${country}`)
+            .openPopup();
+          
+          map.setView([data.latitude, data.longitude], 12);
+        }
+      })
+      .catch(error => {
+        console.error('Errore nel suggerimento coordinate:', error);
+      });
+    }
+    
+    function updateJobTitleOptions() {
+      // Ricarica le opzioni del menu dei titoli di lavoro dopo l'aggiunta di un nuovo lavoro
+      fetch('/get_job_titles')
+        .then(response => response.json())
+        .then(data => {
+          if (data.job_titles) {
+            const select = document.getElementById('job-title');
+            select.innerHTML = '<option value="">Seleziona un lavoro</option>';
+            
+            data.job_titles.forEach(title => {
+              const option = document.createElement('option');
+              option.value = title;
+              option.textContent = title;
+              select.appendChild(option);
+            });
+          }
+        })
+        .catch(error => console.error('Errore nel ricaricate i titoli di lavoro:', error));
+    }
+    
+    // Gestione dei click sulla mappa per aggiungere nuovi lavori
+    map.on('click', function(e) {
+      const currentTab = document.querySelector('.tab.active').textContent;
+      
+      if (currentTab === 'Aggiungi Lavoro') {
+        // Se siamo nella tab di aggiunta lavoro, aggiungi un marker rosso
+        document.getElementById('add-latitude').value = e.latlng.lat.toFixed(4);
+        document.getElementById('add-longitude').value = e.latlng.lng.toFixed(4);
+        
+        if (addJobMarker) {
+          map.removeLayer(addJobMarker);
+        }
+        
+        addJobMarker = L.marker(e.latlng, { icon: addJobIcon })
+          .addTo(map)
+          .bindPopup("Nuovo lavoro")
+          .openPopup();
+      } else {
+        // Se siamo nella tab di ricerca, imposta la posizione dell'utente
+        document.getElementById('startLat').value = e.latlng.lat.toFixed(4);
+        document.getElementById('startLng').value = e.latlng.lng.toFixed(4);
+        
+        if (userMarker) {
+          map.removeLayer(userMarker);
+        }
+        
+        userMarker = L.marker(e.latlng, { icon: userIcon })
+          .addTo(map)
+          .bindPopup("La tua posizione")
+          .openPopup();
+      }
+    });
+
+
+       // Gestione del form per aggiungere città
+    document.getElementById('add-city-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const cityData = {
+        country_name: document.getElementById('add-city-name').value,
+        cost_of_living: parseFloat(document.getElementById('add-city-cost-living').value),
+        rent_index: parseFloat(document.getElementById('add-city-rent').value),
+        latitude: parseFloat(document.getElementById('add-city-lat').value),
+        longitude: parseFloat(document.getElementById('add-city-lng').value),
+        groceries_index: document.getElementById('add-city-groceries').value || null,
+        restaurant_index: document.getElementById('add-city-restaurant').value || null,
+        purchasing_power: document.getElementById('add-city-purchasing').value || null
+      };
+      
+      if (cityData.groceries_index) cityData.groceries_index = parseFloat(cityData.groceries_index);
+      if (cityData.restaurant_index) cityData.restaurant_index = parseFloat(cityData.restaurant_index);
+      if (cityData.purchasing_power) cityData.purchasing_power = parseFloat(cityData.purchasing_power);
+      
+      fetch('/add_city', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cityData)
+      })
+      .then(response => response.json())
+      .then(data => {
+        const messageContainer = document.getElementById('city-message-container');
+        
+        if (data.status === 'success') {
+          messageContainer.innerHTML = '<div class="success-message">' + data.message + '</div>';
+          clearAddCityForm();
+        } else {
+          messageContainer.innerHTML = '<div class="error-message">' + data.message + '</div>';
+        }
+      })
+      .catch(error => {
+        console.error('Errore:', error);
+        document.getElementById('city-message-container').innerHTML = '<div class="error-message">Si è verificato un errore durante l\'aggiunta della città.</div>';
+      });
+    });
+
+    function clearAddCityForm() {
+      document.getElementById('add-city-form').reset();
+      if (addJobMarker) {
+        map.removeLayer(addJobMarker);
+        addJobMarker = null;
+      }
+    }
+
+    function searchCities() {
+      const searchTerm = document.getElementById('search-city').value;
+      
+      fetch('/search_cities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ search_term: searchTerm })
+      })
+      .then(response => response.json())
+      .then(data => {
+        const resultsDiv = document.getElementById('search-results');
+        
+        if (data.status === 'success' && data.results.length > 0) {
+          let html = '<h4>Risultati trovati:</h4>';
+          html += '<table style="width: 100%; border-collapse: collapse; margin-top: 10px;">';
+          html += '<tr style="background-color: #f2f2f2; font-weight: bold;">';
+          html += '<td style="padding: 8px; border: 1px solid #ddd;">Città</td>';
+          html += '<td style="padding: 8px; border: 1px solid #ddd;">Costo Vita</td>';
+          html += '<td style="padding: 8px; border: 1px solid #ddd;">Affitto</td>';
+          html += '<td style="padding: 8px; border: 1px solid #ddd;">Combinato</td>';
+          html += '</tr>';
+          
+          data.results.forEach(city => {
+            html += '<tr>';
+            html += `<td style="padding: 8px; border: 1px solid #ddd;">${city.country}</td>`;
+            html += `<td style="padding: 8px; border: 1px solid #ddd;">${city.cost_of_living.toFixed(2)}</td>`;
+            html += `<td style="padding: 8px; border: 1px solid #ddd;">${city.rent_index.toFixed(2)}</td>`;
+            html += `<td style="padding: 8px; border: 1px solid #ddd;">${city.combined_index.toFixed(2)}</td>`;
+            html += '</tr>';
+          });
+          
+          html += '</table>';
+          resultsDiv.innerHTML = html;
+        } else {
+          resultsDiv.innerHTML = '<p>Nessun risultato trovato.</p>';
+        }
+      })
+      .catch(error => {
+        console.error('Errore nella ricerca:', error);
+        document.getElementById('search-results').innerHTML = '<p>Errore durante la ricerca.</p>';
+      });
+    }
+
+    // Modifica il gestore del click sulla mappa per supportare anche la tab città
+    map.on('click', function(e) {
+      const currentTab = document.querySelector('.tab.active').textContent;
+      
+      if (currentTab === 'Aggiungi Città') {
+        // Se siamo nella tab di aggiunta città, aggiungi le coordinate
+        document.getElementById('add-city-lat').value = e.latlng.lat.toFixed(4);
+        document.getElementById('add-city-lng').value = e.latlng.lng.toFixed(4);
+        
+        if (addJobMarker) {
+          map.removeLayer(addJobMarker);
+        }
+        
+        addJobMarker = L.marker(e.latlng, { icon: addJobIcon })
+          .addTo(map)
+          .bindPopup("Nuova città")
+          .openPopup();
+      } else if (currentTab === 'Aggiungi Lavoro') {
+        // Codice esistente per aggiungere lavori...
+        document.getElementById('add-latitude').value = e.latlng.lat.toFixed(4);
+        document.getElementById('add-longitude').value = e.latlng.lng.toFixed(4);
+        
+        if (addJobMarker) {
+          map.removeLayer(addJobMarker);
+        }
+        
+        addJobMarker = L.marker(e.latlng, { icon: addJobIcon })
+          .addTo(map)
+          .bindPopup("Nuovo lavoro")
+          .openPopup();
+      } else {
+        // Codice esistente per la tab di ricerca...
+        document.getElementById('startLat').value = e.latlng.lat.toFixed(4);
+        document.getElementById('startLng').value = e.latlng.lng.toFixed(4);
+        
+        if (userMarker) {
+          map.removeLayer(userMarker);
+        }
+        
+        userMarker = L.marker(e.latlng, { icon: userIcon })
+          .addTo(map)
+          .bindPopup("La tua posizione")
+          .openPopup();
+      }
+    });
+  </script>
+</body>
+</html>
