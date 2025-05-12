@@ -47,7 +47,7 @@ Una volta scaricato lo zip, estrai tutto nella **cartella `data/`** da creare ne
 
 1. Clona il repository:
    ```bash
-   git clone git@github.com:FloSpace0/proj_03.git
+   git clone git@github.com/FloSpace0/proj_03.git
    cd proj_03
 
 2. Crea un ambiente virtuale (opzionale ma consigliato):
