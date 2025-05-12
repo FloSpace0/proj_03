@@ -70,8 +70,25 @@ Una volta scaricato lo zip, estrai tutto nella **cartella `data/`** da creare ne
 
 
 # PRIMA DI USARLO LEGGERE ATTENTAMENTE:
+## problema pagina crea lavoro
 Quando si va a creare un lavoro non è stato messo ancora alcun caricamento, pertanto si prega di aspettare.
 Quando il lavoro sarà stato creato e metto nel dataset, la schermata del lavoro si risetterà cancellando tutti i dati inseriti
 Quando ciò avviene significa che è stato caricato correttamente.
 Per verificare andare nella schermata iniziale, dove c'è la mappa ed andare a scegliere un lavoro, il nuovo lavoro se non esisteva dovrebbe trovarsi in fondo alla pagina.
+
+## TEST DA USARE Per il massimo dell'esperienza
+Selezionare l'ultimo lavoro come AI Engeener per cercare un lavoro. 
+Queste offerte rapprentano più realisticamnete il tutto, essendo che sono città molto vicine e non nazioni.
+Quindi una volta che si farà search per AI Engeener, verranno date tutte le offerte lavorative di cui le città saranno:
+Milano
+Orzinuovi
+Brescia
+Cremona
+Chiari
+Firenze
+
+
+Se si vuole si può andare a creare nuove città nella pagina aggiungi città
+Dopodiché anche creare lavori nella pagina crea lavori.
+Tutte queste cose andranno ad aggiornare i datasets locali che avrete installato
 
