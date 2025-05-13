@@ -1,0 +1,5 @@
+Prima di avviare app.py.
+Scaricare i dataset da questo link ed andare a creare una cartella "data" e metterli nella cartella data.
+La cartella data deve stare nel root del progetto
+
+https://drive.google.com/drive/folders/1fud-aUBoIciJydLr25gSKKhCfPAWrvFf?usp=drive_link
